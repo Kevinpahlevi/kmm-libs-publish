@@ -14,4 +14,4 @@ pluginManagement {
     }
 }
 
-rootProject.name = "blue-falcon"
+rootProject.name = "KMM-libs"

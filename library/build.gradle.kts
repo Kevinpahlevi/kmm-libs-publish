@@ -49,21 +49,21 @@ android {
 
 kotlin {
     android {
-        publishLibraryVariants("debug", "release")
+        publishLibraryVariants("release")
     }
-    jvm("rpi") {
-        compilations.all {
-            kotlinOptions.jvmTarget = "1.8"
-        }
-    }
-    js {
-        browser {
-            webpackTask {
-                output.libraryTarget = "umd"
-            }
-            binaries.executable()
-        }
-    }
+//    jvm("rpi") {
+//        compilations.all {
+//            kotlinOptions.jvmTarget = "1.8"
+//        }
+//    }
+//    js {
+//        browser {
+//            webpackTask {
+//                output.libraryTarget = "umd"
+//            }
+//            binaries.executable()
+//        }
+//    }
     iosX64 {
         binaries {
             framework {
@@ -96,22 +96,26 @@ kotlin {
         }
         val androidMain by getting {
             dependencies {
+                implementation("org.bouncycastle:bcpkix-jdk15on:1.61")
+                // Gson used for decoding certificate status list
+                implementation("com.google.code.gson:gson:2.8.5")
+                implementation ("com.scottyab:rootbeer-lib:0.1.0")
             }
         }
-        val rpiMain by getting {
-            dependencies {
-                implementation("com.github.weliem:blessed-bluez:0.38")
-            }
-        }
-        val jsMain by getting
-        val iosX64Main by getting
-        val iosArm64Main by getting
+//        val rpiMain by getting {
+//            dependencies {
+//                implementation("com.github.weliem:blessed-bluez:0.38")
+//            }
+//        }
+//        val jsMain by getting
+//        val iosX64Main by getting
+//        val iosArm64Main by getting
         val iosMain by sourceSets.creating {
             dependsOn(commonMain)
-            iosX64Main.dependsOn(this)
-            iosArm64Main.dependsOn(this)
+//            iosX64Main.dependsOn(this)
+//            iosArm64Main.dependsOn(this)
         }
-        val macosX64Main by getting
+//        val macosX64Main by getting
     }
 }
 
@@ -123,59 +127,60 @@ val javadocJar by tasks.creating(Jar::class) {
     archiveClassifier.value("javadoc")
 }
 
-publishing {
-    repositories {
-        maven {
-            url = uri(sonatypeStaging)
+//publishing {
+//    repositories {
+//        maven {
+//            url = uri(sonatypeStaging)
+//
+//            credentials {
+//                username = sonatypeUsernameEnv
+//                password = sonatypePasswordEnv
+//            }
+//        }
+//    }
+//
+//    publications.all {
+//        this as MavenPublication
+//
+//        println(name)
+//        artifact(javadocJar)
+//
+//        pom {
+//            name.set(group)
+//            description.set(projectDescription)
+//            url.set(projectGithubUrl)
+//
+//            licenses {
+//                license {
+//                    name.set("MIT License")
+//                    url.set("http://opensource.org/licenses/MIT")
+//                }
+//            }
+//
+//            developers {
+//                developer {
+//                    id.set(developerId)
+//                    name.set(developerName)
+//                    email.set(developerEmail)
+//                }
+//            }
+//
+//            scm {
+//                url.set(projectGithubUrl)
+//                connection.set(projectGithubSCM)
+//                developerConnection.set(projectGithubSCMSSL)
+//            }
+//
+//        }
+//    }
+//
+//}
 
-            credentials {
-                username = sonatypeUsernameEnv
-                password = sonatypePasswordEnv
-            }
-        }
-    }
+//signing {
+//    whenRequired { gradle.taskGraph.hasTask("publish") }
+//    val signingKey: String? by project
+//    val signingPassword: String? by project
+//    useInMemoryPgpKeys(signingKey, signingPassword)
+//    sign(publishing.publications)
+//}
 
-    publications.all {
-        this as MavenPublication
-
-        println(name)
-        artifact(javadocJar)
-
-        pom {
-            name.set(group)
-            description.set(projectDescription)
-            url.set(projectGithubUrl)
-
-            licenses {
-                license {
-                    name.set("MIT License")
-                    url.set("http://opensource.org/licenses/MIT")
-                }
-            }
-
-            developers {
-                developer {
-                    id.set(developerId)
-                    name.set(developerName)
-                    email.set(developerEmail)
-                }
-            }
-
-            scm {
-                url.set(projectGithubUrl)
-                connection.set(projectGithubSCM)
-                developerConnection.set(projectGithubSCMSSL)
-            }
-
-        }
-    }
-
-}
-
-signing {
-    whenRequired { gradle.taskGraph.hasTask("publish") }
-    val signingKey: String? by project
-    val signingPassword: String? by project
-    useInMemoryPgpKeys(signingKey, signingPassword)
-    sign(publishing.publications)
-}

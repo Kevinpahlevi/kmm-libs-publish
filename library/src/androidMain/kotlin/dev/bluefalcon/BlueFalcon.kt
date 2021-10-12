@@ -1,6 +1,7 @@
 package dev.bluefalcon
 
 import android.Manifest
+import android.annotation.TargetApi
 import android.bluetooth.*
 import android.bluetooth.BluetoothAdapter.STATE_CONNECTED
 import android.bluetooth.BluetoothAdapter.STATE_DISCONNECTED
@@ -10,8 +11,22 @@ import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Environment
 import android.os.ParcelUuid
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyInfo
+import android.security.keystore.KeyProperties
+import android.util.Log
+import java.io.FileOutputStream
+import java.math.BigInteger
+import java.security.KeyFactory
+import java.security.KeyPairGenerator
+import java.security.KeyStore
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.*
+import javax.security.auth.x500.X500Principal
 
 actual class BlueFalcon actual constructor(
     private val context: ApplicationContext,
@@ -23,6 +38,118 @@ actual class BlueFalcon actual constructor(
     private val mGattClientCallback = GattClientCallback()
     var transportMethod: Int = BluetoothDevice.TRANSPORT_AUTO
     actual var isScanning: Boolean = false
+
+
+    //GENERATE KEYSTORE
+    @TargetApi(Build.VERSION_CODES.O)
+    actual fun generate() : String {
+        val textByte: ByteArray = hexStringToByteArray("key attestation test")
+        val Timenow = Date()
+
+        val originationEnd = LocalDate.now().plusDays(11)
+        val consumptionEnd = LocalDate.now().plusDays(21)
+
+        val currentLocalDate = LocalDate.now()
+
+        val systemTimeZone = ZoneId.systemDefault()
+
+        val zonedDateTime = originationEnd.atStartOfDay(systemTimeZone)
+        val zonedDateTime2 = consumptionEnd.atStartOfDay(systemTimeZone)
+
+        val origin = Date.from(zonedDateTime.toInstant())
+        val consumption = Date.from(zonedDateTime2.toInstant())
+        val spec = KeyGenParameterSpec.Builder(
+            "key0",
+            KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
+        )
+            .setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
+            .setCertificateSubject(X500Principal("CN=X, O=X"))
+            .setCertificateSerialNumber(BigInteger.ONE)
+            .setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1)
+            .setAttestationChallenge(textByte)
+            .setKeyValidityStart(Timenow)
+            .setKeyValidityForOriginationEnd(origin)
+            .setKeyValidityForConsumptionEnd(consumption)
+            .build()
+        val generator = KeyPairGenerator.getInstance("RSA", "AndroidKeyStore")
+        generator.initialize(spec)
+
+        generator.generateKeyPair()
+        val keystore = KeyStore.getInstance("AndroidKeyStore")
+        keystore.load(null)
+        val privateKeyEntry = keystore
+            .getEntry("key0", null) as KeyStore.PrivateKeyEntry
+
+
+        val keyFactory = KeyFactory.getInstance(
+            privateKeyEntry.privateKey.algorithm,
+            "AndroidKeyStore"
+        )
+        val keyInfo = keyFactory.getKeySpec(
+            privateKeyEntry.privateKey,
+            KeyInfo::class.java
+        )
+        //get public
+        //get public
+        val certificates = keystore.getCertificateChain("key0")
+
+
+        Log.i("aa", "Is key in secure hardware: " + keyInfo.isInsideSecureHardware)
+        Log.i("aa", "Number of certificates in the chain: " + privateKeyEntry.certificateChain.size)
+        Log.i("aa", "first: " + privateKeyEntry.certificateChain[0].type)
+        Log.i("aa", "second: " + privateKeyEntry.certificateChain[1].type)
+        Log.i("aa", "third: " + privateKeyEntry.certificateChain[2].type)
+        Log.i("aa", "publickey: " + privateKeyEntry.certificateChain[1].publicKey)
+        Log.i("aa", "publickey cert: " + certificates.size)
+
+//        val cos =
+//            FileOutputStream(Environment.getExternalStorageDirectory().absolutePath + "/Download/first11122.der")
+//
+//        cos.write(certificates[0].encoded)
+//
+//        cos.flush()
+//        cos.close()
+//
+//        val cos2 =
+//            FileOutputStream(Environment.getExternalStorageDirectory().absolutePath + "/Download/second211123.der")
+//
+//        cos2.write(certificates[1].encoded)
+//
+//        cos2.flush()
+//        cos2.close()
+//
+//        val cos3 =
+//            FileOutputStream(Environment.getExternalStorageDirectory().absolutePath + "/Download/third311123.der")
+//        cos3.write(certificates[2].encoded)
+//
+//        cos3.flush()
+//        cos3.close()
+//
+//        if (certificates.size == 4) {
+//            val cos4 =
+//                FileOutputStream(Environment.getExternalStorageDirectory().absolutePath + "/Download/fourth41121.der")
+//            cos4.write(certificates[3].encoded)
+//            cos4.flush()
+//            cos4.close()
+//        }
+        return "Is key in secure hardware: " + keyInfo.isInsideSecureHardware
+    }
+
+    fun hexStringToByteArray(s: String): ByteArray {
+        val len = s.length
+        val data = ByteArray(len / 2)
+        var i = 0
+        while (i < len) {
+            data[i / 2] = ((Character.digit(s[i], 16) shl 4)
+                    + Character.digit(s[i + 1], 16)).toByte()
+            i += 2
+        }
+        return data
+    }
+
+
+
 
     actual fun connect(bluetoothPeripheral: BluetoothPeripheral, autoConnect: Boolean) {
         log("connect")
@@ -354,5 +481,7 @@ actual class BlueFalcon actual constructor(
             }
         }
     }
+
+
 
 }
