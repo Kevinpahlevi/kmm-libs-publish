@@ -117,6 +117,19 @@ kotlin {
         }
 //        val macosX64Main by getting
     }
+    val publicationsFromMainHost =
+        listOf(jvm(), js()).map { it.name } + "kotlinMultiplatform"
+    publishing {
+        publications {
+            matching { it.name in publicationsFromMainHost }.all {
+                val targetPublication = this@all
+                tasks.withType<AbstractPublishToMaven>()
+                    .matching { it.publication == targetPublication }
+                    .configureEach { onlyIf { findProperty("isMainHost") == "true" } }
+            }
+        }
+    }
+
 }
 
 fun SigningExtension.whenRequired(block: () -> Boolean) {
@@ -126,6 +139,7 @@ fun SigningExtension.whenRequired(block: () -> Boolean) {
 val javadocJar by tasks.creating(Jar::class) {
     archiveClassifier.value("javadoc")
 }
+
 
 //publishing {
 //    repositories {
@@ -175,7 +189,7 @@ val javadocJar by tasks.creating(Jar::class) {
 //    }
 //
 //}
-
+//
 //signing {
 //    whenRequired { gradle.taskGraph.hasTask("publish") }
 //    val signingKey: String? by project
@@ -183,4 +197,3 @@ val javadocJar by tasks.creating(Jar::class) {
 //    useInMemoryPgpKeys(signingKey, signingPassword)
 //    sign(publishing.publications)
 //}
-
